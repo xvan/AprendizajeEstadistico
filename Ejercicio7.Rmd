@@ -1,0 +1,105 @@
+---
+title: "Ejercicio 7"
+output: html_notebook
+---
+_Los datos del archivo cemento.txt fueron tomados en un estudio experimental para relacionarel calor generado (Y) al fraguar 14 muestras de cemento con distinta composición. Las variablesexplicativas  son  los  pesos  (medidos  en  porcentajes  del  peso  de  cada  muestra  de  cemento)  de  5 componentes del cemento._
+
+```{r, include = FALSE}
+library(ggplot2)
+library(GGally)
+```
+
+```{r}
+datos<-read.table("cemento.txt",header=TRUE, row.names = 1)
+datos
+```
+
+_**1** Calcular la matriz de correlación de todas las variables comprendidas en el problema, incluyendo a la variable Y . Inspeccionando esta matriz determinar cuáles parecen ser las variables que pueden contribuir significativamente a explicar la variación de Y._
+
+```{r, echo = FALSE}
+ggpairs(datos)
+```
+
+Exceptuando la variable `x5`, todas tienen niveles de correlación significativos.
+
+La variable `x3` muestra la máxima correlación con `y` seria esa la candidata en caso de tener que elegir una única variable explicativa.
+
+Se observa una correlación casi completa entre `x3` y `x4`.
+
+_**2** Usar Y como variable dependiente y todas las covariables y una intercept para realizar un ajuste lineal. Calcular el estimador de mínimos cuadrados de los parámetros y para cada uno de ellos testear la hipótesis de que es 0. ¿Cuáles son significativamente distintos de 0? ¿es la regresión significativa? ¿Observa alguna contradicción con el resultado obtenido en los tests individuales anteriores? ¿Vale la pena hacer un nuevo intento para seleccionar qué variables entran en la regresión?_
+
+```{r, echo=FALSE}
+reg <- lm(y~.,datos)
+summary_reg <- summary(reg)
+summary_reg
+```
+Se observan valores de significación muy bajos para todos los coeficientes, que en principio podemos atribuirlo al tamaño de la muestra poblacional.
+
+En base a los p-valores obtenidos, se observa que la significación es similar para todos los coeficientes. Se podría salvar `x2` que rechaza un poco mejor a la hipótesis nula.
+
+En el estádistico F, el p-valor dió bastante mejor, lo que indica que la regresión es significativa. esto esperable debido la correlación encontrada entre `y` y covariables.
+
+Parecería encontrarse una discrepancia entre los resultados del estadístico F y los test de hipótesis nula idividuales. Además se esperaba que `x3` que era la variable más correlacionada, fuese mas signficativa que `x2`.
+
+
+
+```{r, echo=FALSE}
+regNoX4 <- lm(y~ . -x4,datos)
+summary(regNoX4)
+```
+_**3** Calcular la suma de las 5 covariables. ¿Qué observa? ¿Cómo se justifica este parecido entre los totales? A partir de este resultado, ¿Puede justificar ésto que eliminemos del modelo la intercept?_
+
+```{r}
+rowSums(datos[,1:5])
+```
+<!-- #TODO: Que siginfica esto? -->
+_**4** Realizar un nuevo ajuste lineal usando las 5 variables independientes y eliminando la intercept. ¿Cómo se comparan estos resultados con los obtenidos anteriormente? ¿Cuáles son significativamente distintos de 0?_
+
+```{r, echo=FALSE}
+regNullIntercept <- lm(y~0+. ,datos)
+summary(regNullIntercept)
+```
+El modelo con interceptor nulo mejora la significación de los coeficientes. `(x2, x3, x4)` son muy significativos. `x1` no alcanza un p-valor menor a 0.5. Como se observaba a partir de las correlaciones, `x5` no es signficativamente distinto de 0.
+
+_**5** Plantear un nuevo modelo en el que intervengan aquellas variables que contribuyen significativamente y estimar los parámetros por mínimos cuadrados. ¿Qué modelo elegiría finalmente?_
+
+_**6**  A partir de la estimación del error cuadrático medio, determinar si de todos los modelos planteados en el ejercicio, el seleccionado en el ítem anterior parece ser el mejor._
+
+Por orden de significación se ensayan 2 modelos: `(x1,x2,x3,x4)`, `(x2,x3 y x4)`.
+Además se intenta la combinación `(x2, x3)` considerando que existe una gran correlación entre `( x3 y x4)`
+
+
+```{r, echo=FALSE}
+reg_1234 <- lm(y~0+.-x5 ,datos)
+reg_234 <- lm(y~0+.-x5-x1 ,datos)
+reg_23 <- lm(y~0+x1+x2 ,datos)
+
+data.frame( sigma = c( 
+                       summary(reg)$sigma,
+                       summary(regNullIntercept)$sigma,
+                       summary(reg_1234)$sigma,
+                       summary(reg_234)$sigma,
+                       summary(reg_23)$sigma),
+            row.names = c("completo","nullIntercept","x1.x2.x3.x4", "x2.x3.x4", "x2.x3") )
+```
+
+Se observa que al eliminar `x5` mejora el desvío estándar de los residuos. Esta variable solo incorpora ruido.
+Al eliminar `x1` cuya p-valor era mayor a 0.5, sigma empeora un poco. Dependerá de la aplicación si justifica o no muestrear esa variable.
+Eliminar `x4` que se consideraba redundante a primera vista incrementa considerablemente el error.
+
+
+
+```{r}
+#ic para los coeficientes de la regresion
+#LI<-summary_reg$coef[,1]-qt(0.975,df.residual(reg))*summary_reg$coef[,2]
+#LS<-summary_reg$coef[,1]+qt(0.975,df.residual(reg))*summary_reg$coef[,2]
+#rbind(LI,LS)
+confint(reg)
+```
+
+```{r}
+int<-predict(reg ,interval = "prediction", level = 0.95) 
+int
+```
+
+
