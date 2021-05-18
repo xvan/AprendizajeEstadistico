@@ -63,43 +63,52 @@ El modelo con interceptor nulo mejora la significación de los coeficientes. `(x
 
 _**5** Plantear un nuevo modelo en el que intervengan aquellas variables que contribuyen significativamente y estimar los parámetros por mínimos cuadrados. ¿Qué modelo elegiría finalmente?_
 
-_**6**  A partir de la estimación del error cuadrático medio, determinar si de todos los modelos planteados en el ejercicio, el seleccionado en el ítem anterior parece ser el mejor._
-
-Por orden de significación se ensayan 2 modelos: `(x1,x2,x3,x4)`, `(x2,x3 y x4)`.
-Además se intenta la combinación `(x2, x3)` considerando que existe una gran correlación entre `( x3 y x4)`
-
 
 ```{r, echo=FALSE}
 reg_1234 <- lm(y~0+.-x5 ,datos)
 reg_234 <- lm(y~0+.-x5-x1 ,datos)
 reg_23 <- lm(y~0+x1+x2 ,datos)
+```
 
+Comenzamos elmininado  la variable menos significativa,  `X5`.
+
+
+```{r, echo=FALSE}
+summary(reg_1234)
+```
+
+En el modelo `(x1,x2,x3,x4)` se observa un aumento en la significación de los coeficientes y una reducción en el error residual. Puede considerarse que `x5` solo introduce ruido.
+
+`x1` no alcanza un p-valor menor a 0.05, por lo que se intenta eliminándolo.
+
+```{r, echo=FALSE}
+summary(reg_234)
+```
+En el modelo `(x2,x3,x4)` nuevamente incrementa la significación de los coeficientes restantes, sin embargo también incrementa un poco el error residual.
+
+La decisión final de quedarse con `(x2,x3,x4)` o `(x1,x2,x3,x4)` dependerá de la aplicación. En este caso eligiremos `(x2,x3,x4)` ya que el uso común es determinar un umbral de p-valor < 0.05
+
+
+También se intenta la combinación `(x2, x3)` considerando que existe una gran correlación entre `( x3 y x4)`.
+
+```{r, echo=FALSE}
+summary(reg_23)
+```
+
+Se observa que el modelo `(x2, x3)` disminuye la signficación de `x3` y dispara el error residual.
+
+_**6**  A partir de la estimación del error cuadrático medio, determinar si de todos los modelos planteados en el ejercicio, el seleccionado en el ítem anterior parece ser el mejor._
+
+
+```{r}
 data.frame( sigma = c( 
                        summary(reg)$sigma,
                        summary(regNullIntercept)$sigma,
                        summary(reg_1234)$sigma,
                        summary(reg_234)$sigma,
                        summary(reg_23)$sigma),
-            row.names = c("completo","nullIntercept","x1.x2.x3.x4", "x2.x3.x4", "x2.x3") )
+            row.names = c("completo","null.Intercept","x1.x2.x3.x4", "x2.x3.x4", "x2.x3") )
 ```
 
-Se observa que al eliminar `x5` mejora el desvío estándar de los residuos. Esta variable solo incorpora ruido.
-Al eliminar `x1` cuya p-valor era mayor a 0.5, sigma empeora un poco. Dependerá de la aplicación si justifica o no muestrear esa variable.
-Eliminar `x4` que se consideraba redundante a primera vista incrementa considerablemente el error.
-
-
-
-```{r}
-#ic para los coeficientes de la regresion
-#LI<-summary_reg$coef[,1]-qt(0.975,df.residual(reg))*summary_reg$coef[,2]
-#LS<-summary_reg$coef[,1]+qt(0.975,df.residual(reg))*summary_reg$coef[,2]
-#rbind(LI,LS)
-confint(reg)
-```
-
-```{r}
-int<-predict(reg ,interval = "prediction", level = 0.95) 
-int
-```
-
-
+El menor error residual lo tiene el de variables `(x1.x2.x3.x4)` con interceptor nulo.
+Le sigue el modelo completo. Los modelos de interceptor nulo y el modelo elegido, `(x2.x3.x4)`, están en tercer lugar cuando se ordena por el valor de sigma.
